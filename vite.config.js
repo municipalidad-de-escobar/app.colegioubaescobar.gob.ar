@@ -7,8 +7,8 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          // Firebase separado — se carga al login, no bloquea la UI
-          'firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+          // Supabase separado — se carga al login, no bloquea la UI
+          'supabase': ['@supabase/supabase-js'],
           // PDF — solo cuando el usuario imprime boletines
           'pdf-libs': ['jspdf', 'jspdf-autotable', 'jsbarcode'],
           // Excel — solo cuando el usuario exporta orden de mérito

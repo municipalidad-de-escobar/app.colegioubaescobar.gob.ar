@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { onAuthStateChanged } from 'firebase/auth'
-import { collection, getDocs } from 'firebase/firestore'
-import { auth, db } from './config/firebase'
+import { supabase } from './config/supabase'
 import Login from './components/auth/Login'
 import Dashboard from './components/dashboard/Dashboard'
 import Loading from './components/ui/Loading'
@@ -14,23 +12,22 @@ function App() {
   const [activeCycle, setActiveCycle] = useState(null)
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       try {
-        if (currentUser) {
-          const adminData = await checkAdminWhitelist(currentUser.email)
+        if (session?.user) {
+          const adminData = await checkAdminWhitelist(session.user.email)
           if (adminData) {
             setUser({
-              uid: currentUser.uid,
-              email: currentUser.email,
-              displayName: currentUser.displayName,
-              photoURL: currentUser.photoURL,
+              uid: session.user.id,
+              email: session.user.email,
+              displayName: session.user.user_metadata?.full_name,
+              photoURL: session.user.user_metadata?.avatar_url,
               role: adminData.role || 'admin',
               adminId: adminData.id
             })
-            // Cargar el ciclo activo desde Firestore
             await loadActiveCycle()
           } else {
-            await auth.signOut()
+            await supabase.auth.signOut()
             setUser(null)
           }
         } else {
@@ -43,23 +40,29 @@ function App() {
         setIsLoading(false)
       }
     })
-    return unsubscribe
+
+    return () => subscription?.unsubscribe()
   }, [])
 
   const loadActiveCycle = async () => {
     try {
-      const snapshot = await getDocs(collection(db, 'cycles'))
-      const active = snapshot.docs.find(d => d.data().status === 'active')
+      const { data, error: err } = await supabase
+        .from('cycles')
+        .select('year, status')
+        .order('year', { ascending: false })
+
+      if (err) throw err
+
+      const active = data?.find(c => c.status === 'active')
       if (active) {
-        setActiveCycle(active.id)
+        setActiveCycle(active.year)
+      } else if (data?.length > 0) {
+        setActiveCycle(data[0].year)
       } else {
-        // Si no hay ciclo activo, usar el más reciente como referencia
-        const sorted = snapshot.docs.sort((a, b) => b.id.localeCompare(a.id))
-        if (sorted.length > 0) setActiveCycle(sorted[0].id)
+        setActiveCycle(String(new Date().getFullYear()))
       }
     } catch (err) {
       console.error('Error al cargar ciclo activo:', err)
-      // Fallback al año actual
       setActiveCycle(String(new Date().getFullYear()))
     }
   }

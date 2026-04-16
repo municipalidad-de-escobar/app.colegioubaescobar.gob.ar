@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
-import { collection, addDoc, writeBatch, doc } from 'firebase/firestore'
-import { db } from '../../config/firebase'
+import { supabase } from '../../config/supabase'
 import { parseCSV, mapStudentData, validateStudentData } from '../../utils/csvUtils'
 import Button from '../ui/Button'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../ui/Card'
@@ -89,25 +88,23 @@ const ImportStudents = ({ cycle = '2026', onSuccess }) => {
       const csvData = await parseCSV(file, EXPECTED_HEADERS)
       const students = mapStudentData(csvData, cycle)
 
-      // Usar batch para subir en lotes (máximo 500 por batch)
-      let batch = writeBatch(db)
-      const studentsRef = collection(db, 'cycles', cycle, 'students')
+      // Insert students in chunks of 500
+      for (let i = 0; i < students.length; i += 500) {
+        const chunk = students.slice(i, Math.min(i + 500, students.length))
 
-      for (let i = 0; i < students.length; i++) {
-        const student = students[i]
-        const docRef = doc(studentsRef, student.id)
-        batch.set(docRef, student)
+        // Add cycle_year to each student
+        const dataToInsert = chunk.map(s => ({
+          ...s,
+          cycle_year: cycle
+        }))
 
-        // Ejecutar batch cada 500 documentos o al final
-        if ((i + 1) % 500 === 0 || i === students.length - 1) {
-          await batch.commit()
-          
-          // Crear un nuevo batch para el siguiente lote
-          batch = writeBatch(db)
-          
-          // Mostrar progreso
-          console.log(`Subidos ${i + 1}/${students.length} estudiantes`)
-        }
+        const { error: insertErr } = await supabase
+          .from('students')
+          .upsert(dataToInsert, { onConflict: 'id,cycle_year' })
+
+        if (insertErr) throw insertErr
+
+        console.log(`Subidos ${Math.min(i + 500, students.length)}/${students.length} estudiantes`)
       }
 
       setSuccess(`✓ ${students.length} estudiantes importados exitosamente`)
@@ -118,7 +115,6 @@ const ImportStudents = ({ cycle = '2026', onSuccess }) => {
         onSuccess(students.length)
       }
 
-      // Limpiar el input
       document.getElementById('csv-input').value = ''
     } catch (err) {
       console.error('Error al subir estudiantes:', err)

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
-import { db } from '../../config/firebase'
+import { supabase } from '../../config/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card'
 import Button from '../ui/Button'
 import { Archive, Plus, CheckCircle, Clock, AlertTriangle } from 'lucide-react'
@@ -22,22 +21,32 @@ const CycleManager = ({ activeCycle, onCycleChange }) => {
   const loadCycles = async () => {
     setIsLoading(true)
     try {
-      const snapshot = await getDocs(collection(db, 'cycles'))
+      const { data: cycles, error: cyclesErr } = await supabase
+        .from('cycles')
+        .select('year, status, created_at, archived_at')
+        .order('year', { ascending: false })
+
+      if (cyclesErr) throw cyclesErr
+
       const cyclesData = await Promise.all(
-        snapshot.docs.map(async (d) => {
-          const meta = d.data()
-          // Contar estudiantes
-          const studentsSnap = await getDocs(collection(db, 'cycles', d.id, 'students'))
+        cycles.map(async (c) => {
+          const { count, error: countErr } = await supabase
+            .from('students')
+            .select('*', { count: 'exact', head: true })
+            .eq('cycle_year', c.year)
+
+          if (countErr) throw countErr
+
           return {
-            id: d.id,
-            status: meta.status || 'archived',
-            createdAt: meta.createdAt,
-            archivedAt: meta.archivedAt,
-            studentCount: studentsSnap.size
+            id: c.year,
+            status: c.status || 'archived',
+            createdAt: c.created_at,
+            archivedAt: c.archived_at,
+            studentCount: count || 0
           }
         })
       )
-      cyclesData.sort((a, b) => b.id.localeCompare(a.id))
+
       setCycles(cyclesData)
     } catch (err) {
       setError('Error al cargar ciclos: ' + err.message)
@@ -64,11 +73,17 @@ const CycleManager = ({ activeCycle, onCycleChange }) => {
     setIsCreating(true)
     setError('')
     try {
-      await setDoc(doc(db, 'cycles', year), {
-        status: 'active',
-        createdAt: serverTimestamp(),
-        archivedAt: null
-      })
+      const { error: insertErr } = await supabase
+        .from('cycles')
+        .insert({
+          year,
+          status: 'active',
+          created_at: new Date().toISOString(),
+          archived_at: null
+        })
+
+      if (insertErr) throw insertErr
+
       setSuccessMsg(`Ciclo ${year} creado y activado correctamente.`)
       setNewCycleYear('')
       await loadCycles()
@@ -87,10 +102,16 @@ const CycleManager = ({ activeCycle, onCycleChange }) => {
     setIsArchiving(true)
     setError('')
     try {
-      await updateDoc(doc(db, 'cycles', current.id), {
-        status: 'archived',
-        archivedAt: serverTimestamp()
-      })
+      const { error: updateErr } = await supabase
+        .from('cycles')
+        .update({
+          status: 'archived',
+          archived_at: new Date().toISOString()
+        })
+        .eq('year', current.id)
+
+      if (updateErr) throw updateErr
+
       setSuccessMsg(`Ciclo ${current.id} archivado. Ahora podés crear el nuevo ciclo.`)
       setShowConfirm(null)
       await loadCycles()

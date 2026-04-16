@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { collection, doc, onSnapshot, updateDoc } from 'firebase/firestore'
-import { db } from '../../config/firebase'
+import { supabase } from '../../config/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card'
 import { Input } from '../ui/Input'
 import Button from '../ui/Button'
@@ -29,16 +28,21 @@ const StudentsList = ({ cycle }) => {
 
   const handleUpdateStudent = async (updatedData) => {
     try {
-      // Usamos editingStudent.docId para saber exactamente qué documento tocar en Firebase
-      const studentRef = doc(db, 'cycles', cycle, 'students', editingStudent.docId);
-      await updateDoc(studentRef, updatedData);
-      setIsEditModalOpen(false);
-      setEditingStudent(null);
+      const { error } = await supabase
+        .from('students')
+        .update(updatedData)
+        .eq('id', editingStudent.docId)
+        .eq('cycle_year', cycle)
+
+      if (error) throw error
+
+      setIsEditModalOpen(false)
+      setEditingStudent(null)
     } catch (error) {
-      console.error("Error al actualizar:", error);
-      alert("No se pudieron guardar los cambios.");
+      console.error("Error al actualizar:", error)
+      alert("No se pudieron guardar los cambios.")
     }
-  };
+  }
 
   const examOptions = [
     { value: 'M1-2026', label: 'Matemática 1' },
@@ -52,17 +56,55 @@ const StudentsList = ({ cycle }) => {
   ]
 
   useEffect(() => {
-    const studentsCollection = collection(doc(db, 'cycles', cycle), 'students')
-    const unsubscribe = onSnapshot(studentsCollection, (snapshot) => {
-      const studentsData = snapshot.docs.map(doc => ({
-        docId: doc.id,
-        ...doc.data()
-      }))
-      console.log('students snapshot', cycle, snapshot.size, studentsData)
-      setStudents(studentsData)
-    })
+    const loadStudents = async () => {
+      const { data, error } = await supabase
+        .from('students')
+        .select('*')
+        .eq('cycle_year', cycle)
+        .order('apellido')
 
-    return () => unsubscribe()
+      if (error) {
+        console.error('Error loading students:', error)
+        return
+      }
+
+      setStudents(data.map(s => ({
+        ...s,
+        docId: s.id
+      })))
+    }
+
+    loadStudents()
+
+    const channel = supabase
+      .channel(`students:${cycle}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'students',
+          filter: `cycle_year=eq.${cycle}`
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            setStudents(prev => {
+              const idx = prev.findIndex(s => s.id === payload.new.id)
+              if (idx >= 0) {
+                const updated = [...prev]
+                updated[idx] = { ...payload.new, docId: payload.new.id }
+                return updated
+              }
+              return [...prev, { ...payload.new, docId: payload.new.id }]
+            })
+          } else if (payload.eventType === 'DELETE') {
+            setStudents(prev => prev.filter(s => s.id !== payload.old.id))
+          }
+        }
+      )
+      .subscribe()
+
+    return () => channel.unsubscribe()
   }, [cycle])
 
   const normalizedSearch = searchTerm.toLowerCase().trim()

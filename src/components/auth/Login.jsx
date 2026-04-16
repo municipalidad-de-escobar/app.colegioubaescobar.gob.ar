@@ -1,17 +1,11 @@
 import React, { useState } from 'react'
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth'
-import { auth } from '../../config/firebase'
-import { checkAdminWhitelist } from '../../utils/authUtils'
+import { supabase } from '../../config/supabase'
 import Button from '../ui/Button'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../ui/Card'
 import { Alert, AlertTitle, AlertDescription } from '../ui/Alert'
 import Loading from '../ui/Loading'
 import { AlertCircle, LogIn } from 'lucide-react'
 
-/**
- * Componente de Login con Google
- * Valida que el usuario esté en la whitelist de administradores
- */
 const Login = ({ onLoginSuccess }) => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -21,47 +15,19 @@ const Login = ({ onLoginSuccess }) => {
     setError(null)
 
     try {
-      const provider = new GoogleAuthProvider()
-      provider.setCustomParameters({
-        prompt: 'select_account'
+      const { error: signInError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          queryParams: {
+            prompt: 'select_account',
+          },
+        },
       })
 
-      const result = await signInWithPopup(auth, provider)
-      const user = result.user
-
-      // Verificar si el usuario está en la whitelist de administradores
-      const adminData = await checkAdminWhitelist(user.email)
-
-      if (!adminData) {
-        // Usuario no autorizado
-        await auth.signOut()
-        setError('Tu email no está autorizado para acceder a esta aplicación. Contacta al administrador.')
-        setIsLoading(false)
-        return
-      }
-
-      // Usuario autorizado, pasar información al componente padre
-      if (onLoginSuccess) {
-        onLoginSuccess({
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName,
-          photoURL: user.photoURL,
-          role: adminData.role || 'admin',
-          adminId: adminData.id
-        })
-      }
-    } catch (error) {
-      console.error('Error en login:', error)
-      
-      if (error.code === 'auth/popup-closed-by-user') {
-        setError('Login cancelado')
-      } else if (error.code === 'auth/popup-blocked') {
-        setError('Pop-up bloqueado. Por favor, permite pop-ups en tu navegador.')
-      } else {
-        setError('Error al iniciar sesión. Intenta nuevamente.')
-      }
-    } finally {
+      if (signInError) throw signInError
+    } catch (err) {
+      console.error('Error en login:', err)
+      setError('Error al iniciar sesión. Intenta nuevamente.')
       setIsLoading(false)
     }
   }
