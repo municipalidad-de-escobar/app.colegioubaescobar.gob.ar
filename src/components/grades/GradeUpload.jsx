@@ -1,6 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import React, { useState, useRef, useEffect } from 'react'
+import { supabase } from '../../config/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Input } from '../ui/Input';
 import Button from '../ui/Button';
@@ -57,73 +56,90 @@ const GradeUpload = ({ cycle }) => {
       : rawStudentId;
     
     try {
-      // 3. Buscar al estudiante por su ID de campo (no docId)
-      const studentsRef = collection(db, 'cycles', cycle, 'students');
-      const q = query(studentsRef, where("id", "==", studentId));
-      const querySnapshot = await getDocs(q);
+      const { data, error } = await supabase
+        .from('students')
+        .select('*')
+        .eq('id', studentId)
+        .eq('cycle_year', cycle)
+        .single()
 
-      if (querySnapshot.empty) {
-        setStatus({ type: 'error', message: 'Estudiante no encontrado en la base de datos.' });
-        setBarcodeInput('');
+      if (error || !data) {
+        setStatus({ type: 'error', message: 'Estudiante no encontrado en la base de datos.' })
+        setBarcodeInput('')
       } else {
-        const studentDoc = querySnapshot.docs[0];
-        setCurrentStudent({ docId: studentDoc.id, ...studentDoc.data(), barcodeScanned: scannedValue });
-        setStatus({ type: '', message: '' });
+        setCurrentStudent({ docId: data.id, ...data, barcodeScanned: scannedValue })
+        setStatus({ type: '', message: '' })
       }
     } catch (error) {
-      console.error("Error al buscar estudiante:", error);
-      setStatus({ type: 'error', message: 'Error de conexión con la base de datos.' });
+      console.error("Error al buscar estudiante:", error)
+      setStatus({ type: 'error', message: 'Error de conexión con la base de datos.' })
     }
     setBarcodeInput('');
   };
 
- const handleSaveGrade = async () => {
-    // Validamos que haya una nota o que no esté vacío
+  const handleSaveGrade = async () => {
     if (!grade || (isNaN(grade) && grade.toLowerCase() !== 'aus')) {
-      alert("Por favor ingrese una nota válida (0-100) o escriba 'Aus'");
-      return;
+      alert("Por favor ingrese una nota válida (0-100) o escriba 'Aus'")
+      return
     }
 
     try {
-      const studentRef = doc(db, 'cycles', cycle, 'students', currentStudent.docId);
-      
-      // Si el usuario escribió "aus", guardamos el texto, sino el número
-      const valueToSave = grade.toLowerCase() === 'aus' ? 'Aus' : Number(grade);
+      const valueToSave = grade.toLowerCase() === 'aus' ? 'Aus' : Number(grade)
 
       if (typeof valueToSave === 'number' && (valueToSave < 0 || valueToSave > 100)) {
-        alert("La nota debe estar entre 0 y 100");
-        return;
+        alert("La nota debe estar entre 0 y 100")
+        return
       }
 
-      await updateDoc(studentRef, {
-        [`grades.${selectedExam}`]: valueToSave
-      });
+      const updatedGrades = {
+        ...currentStudent.grades,
+        [selectedExam]: valueToSave
+      }
 
-      setStatus({ 
-        type: 'success', 
-        message: `Guardado: ${currentStudent.barcodeScanned || currentStudent.apellido} - ${valueToSave === 'Aus' ? 'Ausente' : 'Nota: ' + valueToSave + ' pts'}` 
-      });
-      setCurrentStudent(null);
-      setGrade('');
+      const { error } = await supabase
+        .from('students')
+        .update({ grades: updatedGrades })
+        .eq('id', currentStudent.docId)
+        .eq('cycle_year', cycle)
+
+      if (error) throw error
+
+      setStatus({
+        type: 'success',
+        message: `Guardado: ${currentStudent.barcodeScanned || currentStudent.apellido} - ${valueToSave === 'Aus' ? 'Ausente' : 'Nota: ' + valueToSave + ' pts'}`
+      })
+      setCurrentStudent(null)
+      setGrade('')
     } catch (error) {
-      console.error("Error al guardar nota:", error);
-      setStatus({ type: 'error', message: 'No se pudo guardar la nota.' });
+      console.error("Error al guardar nota:", error)
+      setStatus({ type: 'error', message: 'No se pudo guardar la nota.' })
     }
-  };
+  }
 
-  // Función directa para el botón de "Marcar Ausente"
   const handleSetAbsent = async () => {
     try {
-      const studentRef = doc(db, 'cycles', cycle, 'students', currentStudent.docId);
-      await updateDoc(studentRef, {
-        [`grades.${selectedExam}`]: 'Aus'
-      });
-      setStatus({ type: 'success', message: `Ausente registrado para ${currentStudent.apellido}` });
-      setCurrentStudent(null);
-      setGrade('');
+      const updatedGrades = {
+        ...currentStudent.grades,
+        [selectedExam]: 'Aus'
+      }
+
+      const { error } = await supabase
+        .from('students')
+        .update({ grades: updatedGrades })
+        .eq('id', currentStudent.docId)
+        .eq('cycle_year', cycle)
+
+      if (error) throw error
+
+      setStatus({
+        type: 'success',
+        message: `Ausente registrado para ${currentStudent.apellido}`
+      })
+      setCurrentStudent(null)
+      setGrade('')
     } catch (error) {
-      console.error("Error:", error);
-      setStatus({ type: 'error', message: 'Error al registrar ausente' });
+      console.error("Error:", error)
+      setStatus({ type: 'error', message: 'Error al registrar ausente' })
     }
   };
 

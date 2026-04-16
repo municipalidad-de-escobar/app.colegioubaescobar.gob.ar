@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, doc, onSnapshot } from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { supabase } from '../../config/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/Table';
 import Button from '../ui/Button';
@@ -156,11 +155,58 @@ const MeritOrder = ({ cycle }) => {
   const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
-    const studentsCollection = collection(doc(db, 'cycles', cycle), 'students');
-    const unsub = onSnapshot(studentsCollection, snap => {
-      setStudents(snap.docs.map(d => ({ docId: d.id, ...d.data() })));
-    });
-    return () => unsub();
+    const loadStudents = async () => {
+      const { data, error } = await supabase
+        .from('students')
+        .select('*')
+        .eq('cycle_year', cycle)
+        .order('apellido');
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      setStudents(data.map(d => ({ docId: d.id, ...d })));
+    };
+
+    loadStudents();
+
+    const channel = supabase
+      .channel(`students:${cycle}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'students',
+          filter: `cycle_year=eq.${cycle}`,
+        },
+        (payload) => {
+          if (
+            payload.eventType === 'INSERT' ||
+            payload.eventType === 'UPDATE'
+          ) {
+            setStudents(prev => {
+              const idx = prev.findIndex(s => s.id === payload.new.id);
+              if (idx >= 0) {
+                const updated = [...prev];
+                updated[idx] = { docId: payload.new.id, ...payload.new };
+                return updated;
+              }
+              return [
+                ...prev,
+                { docId: payload.new.id, ...payload.new },
+              ];
+            });
+          } else if (payload.eventType === 'DELETE') {
+            setStudents(prev => prev.filter(s => s.id !== payload.old.id));
+          }
+        },
+      )
+      .subscribe();
+
+    return () => channel.unsubscribe();
   }, [cycle]);
 
   const { enListado, fuera } = processStudents(students, vacantes);
