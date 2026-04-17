@@ -92,11 +92,7 @@ const ImportStudents = ({ cycle = '2026', onSuccess }) => {
       for (let i = 0; i < students.length; i += 500) {
         const chunk = students.slice(i, Math.min(i + 500, students.length))
 
-        // Add cycle_year to each student
-        const dataToInsert = chunk.map(s => ({
-          ...s,
-          cycle_year: cycle
-        }))
+        const dataToInsert = chunk
 
         const { error: insertErr } = await supabase
           .from('students')

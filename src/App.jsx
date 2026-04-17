@@ -12,36 +12,78 @@ function App() {
   const [activeCycle, setActiveCycle] = useState(null)
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    let isMounted = true
+
+    const initAuth = async () => {
       try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+
+        if (sessionError) {
+          console.error('Session error:', sessionError)
+          setIsLoading(false)
+          return
+        }
+
         if (session?.user) {
-          const adminData = await checkAdminWhitelist(session.user.email)
-          if (adminData) {
-            setUser({
-              uid: session.user.id,
-              email: session.user.email,
-              displayName: session.user.user_metadata?.full_name,
-              photoURL: session.user.user_metadata?.avatar_url,
-              role: adminData.role || 'admin',
-              adminId: adminData.id
-            })
-            await loadActiveCycle()
-          } else {
-            await supabase.auth.signOut()
-            setUser(null)
+          console.log('User authenticated:', session.user.email)
+          try {
+            const adminData = await checkAdminWhitelist(session.user.email)
+            console.log('Admin check result:', adminData)
+
+            if (adminData && isMounted) {
+              setUser({
+                uid: session.user.id,
+                email: session.user.email,
+                displayName: session.user.user_metadata?.full_name,
+                photoURL: session.user.user_metadata?.avatar_url,
+                role: adminData.role || 'admin',
+                adminId: adminData.id
+              })
+              await loadActiveCycle()
+            } else if (!adminData && isMounted) {
+              console.warn('User not in whitelist:', session.user.email)
+              await supabase.auth.signOut()
+              setUser(null)
+            }
+          } catch (whitelistErr) {
+            console.error('Whitelist check error:', whitelistErr)
+            if (isMounted) {
+              setUser(null)
+            }
           }
         } else {
-          setUser(null)
+          console.log('No session')
+          if (isMounted) {
+            setUser(null)
+          }
         }
       } catch (err) {
-        console.error('Error en verificación de usuario:', err)
-        setError('Error al verificar autenticación')
+        console.error('Auth initialization error:', err)
+        if (isMounted) {
+          setError('Error al verificar autenticación')
+        }
       } finally {
-        setIsLoading(false)
+        if (isMounted) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    initAuth()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event, session?.user?.email)
+      if (event === 'SIGNED_OUT') {
+        if (isMounted) {
+          setUser(null)
+        }
       }
     })
 
-    return () => subscription?.unsubscribe()
+    return () => {
+      isMounted = false
+      subscription?.unsubscribe()
+    }
   }, [])
 
   const loadActiveCycle = async () => {

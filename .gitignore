@@ -22,7 +22,9 @@ dist-ssr/
 *.ntvs*
 *.njsproj
 *.sln
-*.sw?
+*.swp
+*.swo
+*~
 
 # Environment variables
 .env
@@ -34,14 +36,7 @@ dist-ssr/
 firebase-debug.log
 .firebaserc
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# Documentación interna desactualizada
+# Outdated internal documentation
 ARBOL_CARPETAS.md
 CHANGELOG.md
 CHECKLIST.md

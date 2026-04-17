@@ -89,16 +89,11 @@ export const mapStudentData = (csvData, cycle) => {
     apellido: row['apellido'] || '',
     nombre: row['nombre'] || '',
     dni: row['dni'] || '',
-    fechaNacimiento: row['fecha_nac'] || row['fecha_nacimiento'] || '',
     comision: row['comision'] || row['comisión'] || '',
-    gestion: row['gestion'] || row['gestión'] || '',
-    partido: row['partido'] || '',
-    cycle,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    exams: buildExams(cycle),
-    grades: {},
-    status: 'active'
+    cycle_year: cycle,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    grades: {}
   }))
 }
 
