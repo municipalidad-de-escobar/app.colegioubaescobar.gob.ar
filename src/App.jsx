@@ -73,7 +73,28 @@ function App() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event, session?.user?.email)
-      if (event === 'SIGNED_OUT') {
+      if (event === 'SIGNED_IN' && session?.user) {
+        try {
+          const adminData = await checkAdminWhitelist(session.user.email)
+          if (adminData && isMounted) {
+            setUser({
+              uid: session.user.id,
+              email: session.user.email,
+              displayName: session.user.user_metadata?.full_name,
+              photoURL: session.user.user_metadata?.avatar_url,
+              role: adminData.role || 'admin',
+              adminId: adminData.id
+            })
+            await loadActiveCycle()
+          } else if (!adminData && isMounted) {
+            console.warn('User not in whitelist:', session.user.email)
+            await supabase.auth.signOut()
+            setUser(null)
+          }
+        } catch (err) {
+          console.error('Whitelist check error on sign in:', err)
+        }
+      } else if (event === 'SIGNED_OUT') {
         if (isMounted) {
           setUser(null)
         }
