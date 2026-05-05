@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { supabase } from '../../config/supabase'
+import { db } from '../../config/firebase'
+import { doc, writeBatch } from 'firebase/firestore'
 import { parseCSV, mapStudentData, validateStudentData } from '../../utils/csvUtils'
 import Button from '../ui/Button'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../ui/Card'
@@ -88,18 +89,24 @@ const ImportStudents = ({ cycle = '2026', onSuccess }) => {
       const csvData = await parseCSV(file, EXPECTED_HEADERS)
       const students = mapStudentData(csvData, cycle)
 
-      // Insert students in chunks of 500
+      // Firestore writeBatch — max 500 ops per batch
       for (let i = 0; i < students.length; i += 500) {
         const chunk = students.slice(i, Math.min(i + 500, students.length))
-
-        const dataToInsert = chunk
-
-        const { error: insertErr } = await supabase
-          .from('students')
-          .upsert(dataToInsert, { onConflict: 'id,cycle_year' })
-
-        if (insertErr) throw insertErr
-
+        const batch = writeBatch(db)
+        chunk.forEach(student => {
+          const ref = doc(db, 'cycles', cycle, 'students', student.id)
+          batch.set(ref, {
+            id: student.id,
+            apellido: student.apellido,
+            nombre: student.nombre,
+            dni: student.dni,
+            comision: student.comision,
+            grades: student.grades || {},
+            createdAt: student.created_at,
+            updatedAt: student.updated_at,
+          }, { merge: true })
+        })
+        await batch.commit()
         console.log(`Subidos ${Math.min(i + 500, students.length)}/${students.length} estudiantes`)
       }
 

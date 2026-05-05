@@ -10,8 +10,8 @@ GitHub Actions builds the React SPA and deploys to EC2 Apache on every push to `
 GitHub Repository
     ↓
 GitHub Actions (Node 20: npm ci → npm run build)
-    ↓  [VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY injected at build time]
-dist/ bundle with baked-in Supabase credentials
+    ↓  [6 VITE_FIREBASE_* secrets injected at build time]
+dist/ bundle with baked-in Firebase credentials
     ↓
 rsync to EC2 via SSH
     ↓
@@ -24,14 +24,14 @@ Browser: SPA fallback routing (all paths → index.html → React Router)
 - No `.env` file on the server — env vars are baked into the bundle at build time
 - No server process to restart — static files served by Apache
 - No Node.js or npm required on EC2
-- No database migrations — Supabase RLS handles access control
+- Access control is enforced by Firestore Security Rules and the `admins` collection whitelist
 
 ---
 
 ## Prerequisites
 
 - EC2 instance running Apache 2.4+ on Amazon Linux (RHEL-based — Apache user/group is `apache:apache`)
-- Supabase project configured (tables, RLS policies, Google OAuth provider)
+- Firebase project configured (Firestore, Google Auth, security rules) — see `FIREBASE_SETUP.md`
 - Local machine with SSH client (`ssh-keygen` available)
 - GitHub repository with `Actions` enabled
 - `sudo` access on EC2
@@ -225,8 +225,14 @@ In the GitHub repository go to **Settings → Secrets and variables → Actions*
 | `SSH_PRIVATE_KEY` | Full contents of `~/.ssh/deploy_colegio` | Local machine |
 | `SERVER_HOST` | EC2 public IP or hostname | EC2 console |
 | `DEPLOY_USER` | `deploy-colegio` | Fixed value |
-| `VITE_SUPABASE_URL` | `https://your-project.supabase.co` | Supabase → Settings → API |
-| `VITE_SUPABASE_ANON_KEY` | Anon/publishable key | Supabase → Settings → API |
+| `VITE_FIREBASE_API_KEY` | Web API key | Firebase Console → Project settings → Your apps |
+| `VITE_FIREBASE_AUTH_DOMAIN` | `your-project.firebaseapp.com` | Firebase Console → Project settings |
+| `VITE_FIREBASE_PROJECT_ID` | Project ID | Firebase Console → Project settings |
+| `VITE_FIREBASE_STORAGE_BUCKET` | `your-project.firebasestorage.app` | Firebase Console → Project settings |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Sender ID | Firebase Console → Project settings |
+| `VITE_FIREBASE_APP_ID` | App ID | Firebase Console → Project settings → Your apps |
+
+See `FIREBASE_SETUP.md` for where to find each value in the Firebase Console.
 
 The private key file starts with `-----BEGIN OPENSSH PRIVATE KEY-----` — copy the entire file content including those lines.
 
@@ -244,7 +250,7 @@ git push origin main
 Monitor the run in the Actions tab. Each step should show green:
 1. Checkout + Node setup
 2. Install dependencies (cached by `package-lock.json` hash)
-3. Build (injects Supabase env vars, produces `dist/`)
+3. Build (injects the 6 Firebase env vars, produces `dist/`)
 4. Configure SSH (writes key, populates `known_hosts`)
 5. Deploy via rsync (`--delete` removes stale chunks from previous builds)
 6. Fix permissions (`755` dirs, `644` files)
@@ -265,9 +271,9 @@ curl -s https://app.colegioubaescobar.gob.ar | grep -o '<title>.*</title>'
 ```
 
 In the browser:
-- Login page should appear
-- Google OAuth should redirect back to the app
-- Only whitelisted accounts in the Supabase `admins` table can sign in
+- Login page should appear with "Ingresar con Google" button
+- Google OAuth popup opens and redirects back to the app
+- Only whitelisted accounts in the Firestore `admins` collection can sign in
 
 ---
 
@@ -275,7 +281,7 @@ In the browser:
 
 Every push to `main` runs `.github/workflows/deploy.yml`:
 
-1. `npm ci` + `npm run build` — Vite produces `dist/` with code-split chunks (Supabase, PDF, Excel loaded on-demand)
+1. `npm ci` + `npm run build` — Vite produces `dist/` with code-split chunks (Firebase, PDF, Excel loaded on-demand)
 2. `rsync dist/ → EC2:/var/www/…` — incremental, `--delete` removes old chunks
 3. Permissions fixed (`755`/`644`) so Apache can read all files
 4. Health check curls the live URL 3×
@@ -302,12 +308,13 @@ cat ~/.ssh/deploy_colegio   # entire file, including BEGIN/END lines
 
 Apache was slow to start. Re-run the workflow (it's idempotent) or wait 30s and curl manually.
 
-### App loads but shows Supabase auth error
+### App loads but Google login fails
 
-1. Verify `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in GitHub Secrets
-2. Supabase Dashboard → Authentication → Providers → Google must be enabled
-3. Redirect URL `https://app.colegioubaescobar.gob.ar/auth/callback` must be listed under allowed redirects
-4. Signing-in account must exist in the Supabase `admins` table
+1. Verify all 6 `VITE_FIREBASE_*` secrets are set correctly in GitHub Secrets
+2. Firebase Console → Authentication → Sign-in method → Google must be enabled
+3. `https://app.colegioubaescobar.gob.ar` must be listed in Firebase Console → Authentication → Settings → Authorized domains
+4. Signing-in account must exist in the Firestore `admins` collection
+5. For popup-blocked errors: ensure HTTPS is active (Google OAuth requires it)
 
 ### Files stuck on old version
 
@@ -334,6 +341,6 @@ tail -f /var/log/httpd/app.colegioubaescobar.gob.ar.access.log
 ## Security notes
 
 - `SSH_PRIVATE_KEY` is only used by GitHub Actions — never commit it to the repo
-- `VITE_SUPABASE_ANON_KEY` is intentionally public (baked into the JS bundle, visible in DevTools) — security is enforced by Supabase Row Level Security policies, not by keeping the key secret
+- Firebase credentials (`VITE_FIREBASE_*`) are intentionally public (baked into the JS bundle, visible in DevTools) — security is enforced by Firestore Security Rules and the `admins` whitelist, not by keeping these values secret
 - The `deploy-colegio` user can only write to `/var/www/app.colegioubaescobar.gob.ar` — it has no shell access to other directories
 - Apache security headers (X-Content-Type-Options, X-Frame-Options, etc.) are set in the VirtualHost config above

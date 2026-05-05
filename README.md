@@ -5,59 +5,59 @@ Aplicación web para la gestión integral del curso de ingreso: importación de 
 
 ---
 
-## 🚀 Tecnologías
+## Tecnologías
 
 | Capa | Tecnología |
 |---|---|
 | Frontend | React 18 + Vite 5 |
-| Estilos | Tailwind CSS |
-| Base de datos | Supabase PostgreSQL |
-| Autenticación | Supabase Auth (Google OAuth) |
-| Hosting actual | EC2 (Apache) |
+| Estilos | Tailwind CSS v3 |
+| Base de datos | Firebase Firestore |
+| Autenticación | Firebase Auth (Google OAuth) |
+| Hosting | EC2 (Apache) vía GitHub Actions |
 | Generación PDF | jsPDF + jspdf-autotable |
 | Exportación Excel | SheetJS (xlsx) |
 | Código de barras | JsBarcode (CODE128) |
 
 ---
 
-## 🏗️ Arquitectura
+## Arquitectura
 
-La aplicación es un **SPA (Single Page Application)** completamente estática. No requiere servidor backend propio — toda la lógica corre en el navegador del cliente y se comunica directamente con Supabase (PostgreSQL con autenticación Google).
+La aplicación es un **SPA (Single Page Application)** completamente estática. No requiere servidor backend propio — toda la lógica corre en el navegador del cliente y se comunica directamente con Firebase.
 
 ```
 Navegador del usuario
        │
        ├── React SPA (archivos estáticos: HTML + JS + CSS)
        │         Se sirve desde Apache en EC2
-       │         (puede migrarse a Nginx, IIS, etc.)
        │
-       └── Supabase ──► PostgreSQL (base de datos)
-                   ──► Authentication (Google OAuth)
+       └── Firebase
+               ├── Firestore  (base de datos NoSQL)
+               └── Auth       (Google OAuth)
 ```
 
 **Requisitos de hosting:**
 - Servidor capaz de servir archivos estáticos (HTML/JS/CSS)
-- HTTPS obligatorio (requerido por Supabase Authentication)
+- HTTPS obligatorio (requerido por Firebase Authentication y Google OAuth)
 - Soporte para SPA: redirigir todas las rutas a `index.html`
 
-**No requiere:** Node.js, Python, PHP, ni ningún proceso de servidor backend (la app es 100% client-side).
+**No requiere:** Node.js, Python, PHP, ni ningún proceso de servidor backend.
 
 ---
 
-## 🔐 Autenticación y Roles
+## Autenticación y Roles
 
-El acceso está restringido por una **whitelist** en Supabase (tabla `admins`). Solo los emails registrados pueden ingresar. Los permisos se controlan mediante **Row Level Security (RLS)** en PostgreSQL.
+El acceso está restringido por una **whitelist** en Firestore (colección `admins`). Solo los emails registrados pueden ingresar.
 
 | Rol | Permisos |
 |---|---|
 | `admin` | Acceso completo: importar estudiantes, cargar notas, gestionar ciclos |
 | `secretary` | Acceso parcial: cargar notas, consultar listas, imprimir boletines y orden de mérito |
 
-El login utiliza **Google OAuth** — los usuarios ingresan con su cuenta Google institucional. No se manejan contraseñas en la aplicación.
+El login usa **Google OAuth** via Firebase — los usuarios ingresan con su cuenta Google. No se manejan contraseñas en la aplicación.
 
 ---
 
-## 📋 Funcionalidades
+## Funcionalidades
 
 - **Gestión de ciclos:** Sistema multi-año. El admin archiva el ciclo vigente y activa el nuevo al comenzar cada año. Los ciclos archivados quedan en modo solo lectura para consulta.
 - **Importación de estudiantes:** Carga masiva desde archivo CSV con validación de campos requeridos.
@@ -68,46 +68,43 @@ El login utiliza **Google OAuth** — los usuarios ingresan con su cuenta Google
 
 ---
 
-## 🗄️ Estructura de la Base de Datos (Supabase PostgreSQL)
+## Estructura de la Base de Datos (Firestore)
 
 ```
-public schema
-├── admins                         # Whitelist de usuarios autorizados
-│   ├── id (UUID, PK)
-│   ├── email (TEXT, UNIQUE)
-│   ├── role ("admin" | "secretary")
-│   ├── created_at (TIMESTAMP)
-│   └── updated_at (TIMESTAMP)
-│
-├── cycles                         # Ciclos lectivos
-│   ├── year (INTEGER, PK)         # Ej: 2026
-│   ├── status ("active" | "archived")
-│   ├── created_at (TIMESTAMP)
-│   └── archived_at (TIMESTAMP)
-│
-└── students                       # Estudiantes (composite PK: id + cycle_year)
-    ├── id (TEXT, PK)              # Ej: "2026-001"
-    ├── cycle_year (INTEGER, PK, FK → cycles.year)
-    ├── apellido (TEXT)
-    ├── nombre (TEXT)
-    ├── dni (TEXT)
-    ├── comision (TEXT)
-    ├── grades (JSONB)             # Calificaciones: {"M1-2026": 85, "L2-2026": "Aus"}
-    ├── created_at (TIMESTAMP)
-    └── updated_at (TIMESTAMP)
+admins/                         # Whitelist de usuarios autorizados
+  {docId}/
+    email:    string
+    role:     "admin" | "secretary"
+
+cycles/                         # Ciclos lectivos
+  {year}/                       # Ej: "2026"
+    status:     "active" | "archived"
+    createdAt:  string (ISO)
+    archivedAt: string (ISO) | null
+
+    students/                   # Sub-colección de estudiantes del ciclo
+      {studentId}/              # Ej: "2026-001"
+        id:        string       # igual al docId
+        apellido:  string
+        nombre:    string
+        dni:       string
+        comision:  string
+        grades:    map          # Ej: { "M1-2026": 85, "L2-2026": "Aus" }
+        createdAt: string (ISO)
+        updatedAt: string (ISO)
 ```
 
-Ver `SUPABASE_SETUP.md` para detalles completos de setup incluidas RLS policies.
+Ver `FIREBASE_SETUP.md` para el setup completo: reglas de seguridad, Google OAuth y configuración de GitHub Secrets.
 
 ---
 
-## 🛠️ Instalación local (desarrollo)
+## Instalación local (desarrollo)
 
-**Requisitos previos:** Node.js 18+ y npm.
+**Requisitos:** Node.js 18+ y npm.
 
 ```bash
 # 1. Clonar el repositorio
-git clone https://github.com/[usuario]/[repositorio].git
+git clone https://github.com/municipalidad-de-escobar/app.colegioubaescobar.gob.ar.git
 cd app.colegioubaescobar.gob.ar
 
 # 2. Instalar dependencias
@@ -115,7 +112,7 @@ npm install
 
 # 3. Configurar variables de entorno
 cp .env.example .env
-# Editar .env con las credenciales de Supabase (ver SUPABASE_SETUP.md)
+# Completar .env con las credenciales de Firebase (ver FIREBASE_SETUP.md)
 
 # 4. Iniciar servidor de desarrollo
 npm run dev
@@ -124,20 +121,14 @@ npm run dev
 
 ---
 
-## 🚢 Build para producción
+## Build para producción
 
 ```bash
-# Generar build optimizado
 npm run build
-# Los archivos estáticos quedan en la carpeta /dist
+# Los archivos estáticos quedan en /dist
 ```
 
-Para deploying en producción, ver `SUPABASE_SETUP.md` (base de datos) y la documentación del servidor de hosting (Apache, Nginx, etc.).
-
-La carpeta `/dist` contiene:
-- `index.html` — punto de entrada de la SPA
-- `assets/` — JavaScript y CSS bundleados (code-splitting automático por Vite)
-- Archivos estáticos requeridos
+El deploy a producción es automático vía GitHub Actions al hacer push a `main`. Ver `DEPLOYMENT_SETUP.md`.
 
 **Configuración Apache (SPA routing):**
 ```apache
@@ -153,27 +144,31 @@ La carpeta `/dist` contiene:
 
 ---
 
-## 🔑 Variables de entorno
+## Variables de entorno
 
-Crear un archivo `.env` en la raíz del proyecto con las credenciales de Supabase:
+Crear un archivo `.env` en la raíz con las credenciales del proyecto Firebase:
 
 ```env
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+VITE_FIREBASE_API_KEY=
+VITE_FIREBASE_AUTH_DOMAIN=
+VITE_FIREBASE_PROJECT_ID=
+VITE_FIREBASE_STORAGE_BUCKET=
+VITE_FIREBASE_MESSAGING_SENDER_ID=
+VITE_FIREBASE_APP_ID=
 ```
 
-Obtener estos valores de: **Supabase Dashboard** → **Settings** → **API**.
+Obtener estos valores desde: **Firebase Console** → Configuración del proyecto → Tus apps → Configuración de la app web.
 
-> ⚠️ La `ANON_KEY` es pública por diseño (se expone al cliente). La seguridad está implementada a nivel de **Row Level Security (RLS)** en PostgreSQL.
+> Las credenciales de Firebase para web son públicas por diseño (se exponen al cliente). La seguridad se implementa mediante **Firestore Security Rules** y la whitelist en la colección `admins`.
 
 ---
 
-## 📁 Estructura del proyecto
+## Estructura del proyecto
 
 ```
 src/
 ├── components/
-│   ├── auth/          # Login (Google OAuth)
+│   ├── auth/          # Login (Google OAuth via Firebase)
 │   ├── cycles/        # Gestión de ciclos (CycleManager)
 │   ├── dashboard/     # Layout principal (Dashboard)
 │   ├── grades/        # Notas, boletines, orden de mérito
@@ -185,9 +180,9 @@ src/
 │   ├── students/      # Lista y edición de estudiantes
 │   └── ui/            # Componentes reutilizables (Button, Card, Alert, etc.)
 ├── config/
-│   └── supabase.js    # Cliente Supabase
+│   └── firebase.js    # Cliente Firebase (Auth + Firestore)
 ├── utils/
-│   ├── authUtils.js   # Verificación de whitelist
+│   ├── authUtils.js   # Verificación de whitelist (Firestore)
 │   └── csvUtils.js    # Parseo e importación CSV
 public/
 └── logo2.png          # Logo institucional
@@ -195,7 +190,8 @@ public/
 
 ---
 
-## 📚 Documentación adicional
+## Documentación adicional
 
-- **Configuración de Supabase:** Ver `SUPABASE_SETUP.md` (setup inicial, SQL schema, Google OAuth, RLS policies)
-- **Guía general de proyectos:** Ver `../CLAUDE.md` (repository overview, monorepo structure)
+- **Configuración de Firebase:** `FIREBASE_SETUP.md` — setup inicial, Firestore, Google OAuth, security rules, GitHub Secrets
+- **Deploy a producción:** `DEPLOYMENT_SETUP.md` — EC2, Apache, SSH, GitHub Actions
+- **Guía general del monorepo:** `../CLAUDE.md`

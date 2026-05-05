@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { supabase } from '../../config/supabase'
+import { db } from '../../config/firebase'
+import { doc, getDoc, updateDoc } from 'firebase/firestore'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Input } from '../ui/Input';
 import Button from '../ui/Button';
@@ -56,18 +57,14 @@ const GradeUpload = ({ cycle }) => {
       : rawStudentId;
     
     try {
-      const { data, error } = await supabase
-        .from('students')
-        .select('*')
-        .eq('id', studentId)
-        .eq('cycle_year', cycle)
-        .single()
+      const ref = doc(db, 'cycles', cycle, 'students', studentId)
+      const snap = await getDoc(ref)
 
-      if (error || !data) {
+      if (!snap.exists()) {
         setStatus({ type: 'error', message: 'Estudiante no encontrado en la base de datos.' })
         setBarcodeInput('')
       } else {
-        setCurrentStudent({ docId: data.id, ...data, barcodeScanned: scannedValue })
+        setCurrentStudent({ docId: snap.id, ...snap.data(), barcodeScanned: scannedValue })
         setStatus({ type: '', message: '' })
       }
     } catch (error) {
@@ -96,13 +93,8 @@ const GradeUpload = ({ cycle }) => {
         [selectedExam]: valueToSave
       }
 
-      const { error } = await supabase
-        .from('students')
-        .update({ grades: updatedGrades })
-        .eq('id', currentStudent.docId)
-        .eq('cycle_year', cycle)
-
-      if (error) throw error
+      const ref = doc(db, 'cycles', cycle, 'students', currentStudent.docId)
+      await updateDoc(ref, { grades: updatedGrades, updatedAt: new Date().toISOString() })
 
       setStatus({
         type: 'success',
@@ -123,13 +115,8 @@ const GradeUpload = ({ cycle }) => {
         [selectedExam]: 'Aus'
       }
 
-      const { error } = await supabase
-        .from('students')
-        .update({ grades: updatedGrades })
-        .eq('id', currentStudent.docId)
-        .eq('cycle_year', cycle)
-
-      if (error) throw error
+      const ref = doc(db, 'cycles', cycle, 'students', currentStudent.docId)
+      await updateDoc(ref, { grades: updatedGrades, updatedAt: new Date().toISOString() })
 
       setStatus({
         type: 'success',

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { supabase } from '../../config/supabase'
+import { db } from '../../config/firebase'
+import { collection, doc, query, orderBy, onSnapshot, updateDoc } from 'firebase/firestore'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card'
 import { Input } from '../ui/Input'
 import Button from '../ui/Button'
@@ -28,14 +29,8 @@ const StudentsList = ({ cycle }) => {
 
   const handleUpdateStudent = async (updatedData) => {
     try {
-      const { error } = await supabase
-        .from('students')
-        .update(updatedData)
-        .eq('id', editingStudent.docId)
-        .eq('cycle_year', cycle)
-
-      if (error) throw error
-
+      const ref = doc(db, 'cycles', cycle, 'students', editingStudent.docId)
+      await updateDoc(ref, { ...updatedData, updatedAt: new Date().toISOString() })
       setIsEditModalOpen(false)
       setEditingStudent(null)
     } catch (error) {
@@ -56,55 +51,16 @@ const StudentsList = ({ cycle }) => {
   ]
 
   useEffect(() => {
-    const loadStudents = async () => {
-      const { data, error } = await supabase
-        .from('students')
-        .select('*')
-        .eq('cycle_year', cycle)
-        .order('apellido')
-
-      if (error) {
-        console.error('Error loading students:', error)
-        return
-      }
-
-      setStudents(data.map(s => ({
-        ...s,
-        docId: s.id
-      })))
-    }
-
-    loadStudents()
-
-    const channel = supabase
-      .channel(`students:${cycle}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'students',
-          filter: `cycle_year=eq.${cycle}`
-        },
-        (payload) => {
-          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-            setStudents(prev => {
-              const idx = prev.findIndex(s => s.id === payload.new.id)
-              if (idx >= 0) {
-                const updated = [...prev]
-                updated[idx] = { ...payload.new, docId: payload.new.id }
-                return updated
-              }
-              return [...prev, { ...payload.new, docId: payload.new.id }]
-            })
-          } else if (payload.eventType === 'DELETE') {
-            setStudents(prev => prev.filter(s => s.id !== payload.old.id))
-          }
-        }
-      )
-      .subscribe()
-
-    return () => channel.unsubscribe()
+    const q = query(
+      collection(db, 'cycles', cycle, 'students'),
+      orderBy('apellido')
+    )
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setStudents(snapshot.docs.map(d => ({ docId: d.id, ...d.data() })))
+    }, (error) => {
+      console.error('Error loading students:', error)
+    })
+    return unsubscribe
   }, [cycle])
 
   const normalizedSearch = searchTerm.toLowerCase().trim()

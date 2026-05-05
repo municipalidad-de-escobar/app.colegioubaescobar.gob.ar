@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../config/supabase';
+import { db } from '../../config/firebase';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/Table';
 import Button from '../ui/Button';
 import { Trophy, Download, Settings } from 'lucide-react';
 
-const CYCLE = '2026';
-const MAT_EXAMS = [`M1-${CYCLE}`, `M2-${CYCLE}`, `M3-${CYCLE}`];
-const LEN_EXAMS = [`L1-${CYCLE}`, `L2-${CYCLE}`, `L3-${CYCLE}`];
-const MAT_RECUP = `RM-${CYCLE}`;
-const LEN_RECUP = `RL-${CYCLE}`;
+// Exam keys are built dynamically from the cycle prop inside the component
 
 // ── Lógica de cálculo ──────────────────────────────────────────────────────────
 
@@ -32,26 +29,25 @@ const calcSubjectTotal = (grades, exams, recupKey) => {
   return total;
 };
 
-const countRendidos = (grades) => {
-  const allExams = [...MAT_EXAMS, ...LEN_EXAMS];
+const countRendidos = (grades, matExams, lenExams, matRecup, lenRecup) => {
+  const allExams = [...matExams, ...lenExams];
   let rendidos = allExams.filter(ex => typeof grades?.[ex] === 'number').length;
 
-  // Recuperatorios cuentan si hubo exactamente 1 ausente en esa materia
-  const matAusentes = MAT_EXAMS.filter(ex => grades?.[ex] === 'Aus').length;
-  const lenAusentes = LEN_EXAMS.filter(ex => grades?.[ex] === 'Aus').length;
+  const matAusentes = matExams.filter(ex => grades?.[ex] === 'Aus').length;
+  const lenAusentes = lenExams.filter(ex => grades?.[ex] === 'Aus').length;
 
-  if (matAusentes === 1 && typeof grades?.[MAT_RECUP] === 'number') rendidos++;
-  if (lenAusentes === 1 && typeof grades?.[LEN_RECUP] === 'number') rendidos++;
+  if (matAusentes === 1 && typeof grades?.[matRecup] === 'number') rendidos++;
+  if (lenAusentes === 1 && typeof grades?.[lenRecup] === 'number') rendidos++;
 
   return rendidos;
 };
 
-const processStudents = (students, vacantes) => {
+const processStudents = (students, vacantes, matExams, lenExams, matRecup, lenRecup) => {
   const processed = students.map(s => {
-    const matTotal = calcSubjectTotal(s.grades, MAT_EXAMS, MAT_RECUP);
-    const lenTotal = calcSubjectTotal(s.grades, LEN_EXAMS, LEN_RECUP);
+    const matTotal = calcSubjectTotal(s.grades, matExams, matRecup);
+    const lenTotal = calcSubjectTotal(s.grades, lenExams, lenRecup);
     const granTotal = matTotal + lenTotal;
-    const rendidos = countRendidos(s.grades);
+    const rendidos = countRendidos(s.grades, matExams, lenExams, matRecup, lenRecup);
 
     const cumplePiso = matTotal >= 180 && lenTotal >= 180;
     const cumpleTotal = granTotal >= 360;
@@ -148,6 +144,11 @@ const exportToExcel = async (enListado, fuera, cycle, vacantes) => {
 // ── Componente ─────────────────────────────────────────────────────────────────
 
 const MeritOrder = ({ cycle }) => {
+  const MAT_EXAMS = [`M1-${cycle}`, `M2-${cycle}`, `M3-${cycle}`];
+  const LEN_EXAMS = [`L1-${cycle}`, `L2-${cycle}`, `L3-${cycle}`];
+  const MAT_RECUP = `RM-${cycle}`;
+  const LEN_RECUP = `RL-${cycle}`;
+
   const [students, setStudents] = useState([]);
   const [vacantes, setVacantes] = useState(90);
   const [showSettings, setShowSettings] = useState(false);
@@ -155,61 +156,19 @@ const MeritOrder = ({ cycle }) => {
   const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
-    const loadStudents = async () => {
-      const { data, error } = await supabase
-        .from('students')
-        .select('*')
-        .eq('cycle_year', cycle)
-        .order('apellido');
-
-      if (error) {
-        console.error(error);
-        return;
-      }
-
-      setStudents(data.map(d => ({ docId: d.id, ...d })));
-    };
-
-    loadStudents();
-
-    const channel = supabase
-      .channel(`students:${cycle}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'students',
-          filter: `cycle_year=eq.${cycle}`,
-        },
-        (payload) => {
-          if (
-            payload.eventType === 'INSERT' ||
-            payload.eventType === 'UPDATE'
-          ) {
-            setStudents(prev => {
-              const idx = prev.findIndex(s => s.id === payload.new.id);
-              if (idx >= 0) {
-                const updated = [...prev];
-                updated[idx] = { docId: payload.new.id, ...payload.new };
-                return updated;
-              }
-              return [
-                ...prev,
-                { docId: payload.new.id, ...payload.new },
-              ];
-            });
-          } else if (payload.eventType === 'DELETE') {
-            setStudents(prev => prev.filter(s => s.id !== payload.old.id));
-          }
-        },
-      )
-      .subscribe();
-
-    return () => channel.unsubscribe();
+    const q = query(
+      collection(db, 'cycles', cycle, 'students'),
+      orderBy('apellido')
+    )
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setStudents(snapshot.docs.map(d => ({ docId: d.id, ...d.data() })))
+    }, (error) => {
+      console.error(error)
+    })
+    return unsubscribe
   }, [cycle]);
 
-  const { enListado, fuera } = processStudents(students, vacantes);
+  const { enListado, fuera } = processStudents(students, vacantes, MAT_EXAMS, LEN_EXAMS, MAT_RECUP, LEN_RECUP);
 
   const handleExport = async () => {
     setIsExporting(true);

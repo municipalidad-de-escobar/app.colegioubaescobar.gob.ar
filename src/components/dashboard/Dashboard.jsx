@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import { supabase } from '../../config/supabase'
+import { auth, db } from '../../config/firebase'
+import { signOut } from 'firebase/auth'
+import { collection, getDocs } from 'firebase/firestore'
 import Button from '../ui/Button'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/Card'
 import { LogOut, Users, FileUp, BarChart3, Settings, Home, Archive, Trophy, ChevronDown } from 'lucide-react'
@@ -27,14 +29,10 @@ const Dashboard = ({ user, activeCycle, onCycleChange, onLogout }) => {
 
   const loadCycles = async () => {
     try {
-      const { data, error } = await supabase
-        .from('cycles')
-        .select('year, status')
-        .order('year', { ascending: false })
-
-      if (error) throw error
-
-      const mapped = data.map(d => ({ id: d.year, status: d.status || 'archived' }))
+      const snapshot = await getDocs(collection(db, 'cycles'))
+      const mapped = snapshot.docs
+        .map(d => ({ id: d.id, status: d.data().status || 'archived' }))
+        .sort((a, b) => b.id.localeCompare(a.id))
       setCycles(mapped)
     } catch (err) {
       console.error('Error cargando ciclos:', err)
@@ -43,7 +41,7 @@ const Dashboard = ({ user, activeCycle, onCycleChange, onLogout }) => {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut()
+      await signOut(auth)
       if (onLogout) onLogout()
     } catch (error) {
       console.error('Error al cerrar sesión:', error)

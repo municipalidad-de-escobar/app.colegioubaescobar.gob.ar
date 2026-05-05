@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../config/supabase';
+import { db } from '../../config/firebase';
+import { collection, doc, query, orderBy, onSnapshot, updateDoc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/Table';
 import { Input } from '../ui/Input';
@@ -24,55 +25,16 @@ const GradeBoard = ({ cycle }) => {
   ];
 
   useEffect(() => {
-    const loadStudents = async () => {
-      const { data, error } = await supabase
-        .from('students')
-        .select('*')
-        .eq('cycle_year', cycle)
-        .order('apellido')
-
-      if (error) {
-        console.error('Error loading students:', error)
-        return
-      }
-
-      setStudents(data.map(s => ({
-        ...s,
-        docId: s.id
-      })))
-    }
-
-    loadStudents()
-
-    const channel = supabase
-      .channel(`students:${cycle}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'students',
-          filter: `cycle_year=eq.${cycle}`
-        },
-        (payload) => {
-          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-            setStudents(prev => {
-              const idx = prev.findIndex(s => s.id === payload.new.id)
-              if (idx >= 0) {
-                const updated = [...prev]
-                updated[idx] = { ...payload.new, docId: payload.new.id }
-                return updated
-              }
-              return [...prev, { ...payload.new, docId: payload.new.id }]
-            })
-          } else if (payload.eventType === 'DELETE') {
-            setStudents(prev => prev.filter(s => s.id !== payload.old.id))
-          }
-        }
-      )
-      .subscribe()
-
-    return () => channel.unsubscribe()
+    const q = query(
+      collection(db, 'cycles', cycle, 'students'),
+      orderBy('apellido')
+    )
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setStudents(snapshot.docs.map(d => ({ docId: d.id, ...d.data() })))
+    }, (error) => {
+      console.error('Error loading students:', error)
+    })
+    return unsubscribe
   }, [cycle]);
 
   const handleStartEdit = (studentId, examId, currentGrade) => {
@@ -83,26 +45,12 @@ const GradeBoard = ({ cycle }) => {
   const handleSaveQuickGrade = async (studentDocId) => {
     try {
       const examId = editingCell.examId
-      const { data: current } = await supabase
-        .from('students')
-        .select('grades')
-        .eq('id', studentDocId)
-        .eq('cycle_year', cycle)
-        .single()
-
-      const updatedGrades = {
-        ...current.grades,
-        [examId]: tempGrade === '' ? null : Number(tempGrade)
-      }
-
-      const { error } = await supabase
-        .from('students')
-        .update({ grades: updatedGrades })
-        .eq('id', studentDocId)
-        .eq('cycle_year', cycle)
-
-      if (error) throw error
-
+      const value = tempGrade === '' ? null : Number(tempGrade)
+      const ref = doc(db, 'cycles', cycle, 'students', studentDocId)
+      await updateDoc(ref, {
+        [`grades.${examId}`]: value,
+        updatedAt: new Date().toISOString()
+      })
       setEditingCell(null)
     } catch (error) {
       console.error("Error al actualizar nota:", error)

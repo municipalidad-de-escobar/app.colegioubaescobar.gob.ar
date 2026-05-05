@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { supabase } from "../../config/supabase";
+import { db } from "../../config/firebase";
+import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
 import {
     Table,
@@ -22,74 +23,22 @@ const ReportsManager = ({ cycle }) => {
     const [isGenerating, setIsGenerating] = useState(false);
 
     useEffect(() => {
-        const loadStudents = async () => {
-            const { data, error } = await supabase
-                .from("students")
-                .select("*")
-                .eq("cycle_year", cycle)
-                .order("apellido");
-            if (error) {
-                console.error(error);
-                return;
-            }
+        const q = query(
+            collection(db, "cycles", cycle, "students"),
+            orderBy("apellido")
+        );
+        const unsubscribe = onSnapshot(q, (snapshot) => {
             setStudents(
-                data.map((s) => ({
-                    ...s,
-                    grades: s.grades || {},
-                    docId: s.id,
-                })),
+                snapshot.docs.map((d) => ({
+                    docId: d.id,
+                    ...d.data(),
+                    grades: d.data().grades || {},
+                }))
             );
-        };
-
-        loadStudents();
-
-        const channel = supabase
-            .channel(`students:${cycle}`)
-            .on(
-                "postgres_changes",
-                {
-                    event: "*",
-                    schema: "public",
-                    table: "students",
-                    filter: `cycle_year=eq.${cycle}`,
-                },
-                (payload) => {
-                    if (
-                        payload.eventType === "INSERT" ||
-                        payload.eventType === "UPDATE"
-                    ) {
-                        setStudents((prev) => {
-                            const idx = prev.findIndex(
-                                (s) => s.id === payload.new.id,
-                            );
-                            if (idx >= 0) {
-                                const updated = [...prev];
-                                updated[idx] = {
-                                    ...payload.new,
-                                    grades: payload.new.grades || {},
-                                    docId: payload.new.id,
-                                };
-                                return updated;
-                            }
-                            return [
-                                ...prev,
-                                {
-                                    ...payload.new,
-                                    grades: payload.new.grades || {},
-                                    docId: payload.new.id,
-                                },
-                            ];
-                        });
-                    } else if (payload.eventType === "DELETE") {
-                        setStudents((prev) =>
-                            prev.filter((s) => s.id !== payload.old.id),
-                        );
-                    }
-                },
-            )
-            .subscribe();
-
-        return () => channel.unsubscribe();
+        }, (error) => {
+            console.error(error);
+        });
+        return unsubscribe;
     }, [cycle]);
 
     // Lista de comisiones únicas
