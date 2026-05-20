@@ -30,6 +30,21 @@ const EditStudentModal = ({ student, isOpen, onClose, onSave }) => {
       alert('Apellido y nombre son obligatorios.');
       return;
     }
+
+    // DNI validation: must be 7-8 digits
+    const dniValue = formData.dni.trim();
+    if (dniValue && (isNaN(dniValue) || dniValue.length < 7 || dniValue.length > 8)) {
+      alert('DNI debe ser un número válido de 7 a 8 dígitos.');
+      return;
+    }
+
+    // Comisión validation: should be numeric if provided
+    const comisionValue = formData.comision.trim();
+    if (comisionValue && isNaN(comisionValue)) {
+      alert('Comisión debe ser un número válido.');
+      return;
+    }
+
     // Solo mandamos los campos editables, no todo el objeto
     onSave({
       apellido: formData.apellido.trim(),
@@ -70,18 +85,23 @@ const EditStudentModal = ({ student, isOpen, onClose, onSave }) => {
             <label className="block text-sm font-medium mb-1">DNI</label>
             <Input
               name="dni"
+              type="number"
               value={formData.dni || ''}
               onChange={handleChange}
-              placeholder="DNI"
+              placeholder="12345678"
+              min="1000000"
+              max="99999999"
             />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Comisión</label>
             <Input
               name="comision"
+              type="number"
               value={formData.comision || ''}
               onChange={handleChange}
-              placeholder="Comisión"
+              placeholder="1"
+              min="1"
             />
           </div>
         </div>

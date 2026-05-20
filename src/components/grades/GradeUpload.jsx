@@ -75,16 +75,17 @@ const GradeUpload = ({ cycle }) => {
   };
 
   const handleSaveGrade = async () => {
-    if (!grade || (isNaN(grade) && grade.toLowerCase() !== 'aus')) {
-      alert("Por favor ingrese una nota válida (0-100) o escriba 'Aus'")
+    const trimmedGrade = String(grade).trim()
+    if (!trimmedGrade || isNaN(trimmedGrade)) {
+      alert("Por favor ingrese una nota válida (0-100)")
       return
     }
 
     try {
-      const valueToSave = grade.toLowerCase() === 'aus' ? 'Aus' : Number(grade)
+      const valueToSave = Number(trimmedGrade)
 
-      if (typeof valueToSave === 'number' && (valueToSave < 0 || valueToSave > 100)) {
-        alert("La nota debe estar entre 0 y 100")
+      if (!Number.isInteger(valueToSave) || valueToSave < 0 || valueToSave > 100) {
+        alert("La nota debe ser un número entero entre 0 y 100")
         return
       }
 
@@ -98,7 +99,7 @@ const GradeUpload = ({ cycle }) => {
 
       setStatus({
         type: 'success',
-        message: `Guardado: ${currentStudent.barcodeScanned || currentStudent.apellido} - ${valueToSave === 'Aus' ? 'Ausente' : 'Nota: ' + valueToSave + ' pts'}`
+        message: `Guardado: ${currentStudent.barcodeScanned || currentStudent.apellido} - Nota: ${valueToSave} pts`
       })
       setCurrentStudent(null)
       setGrade('')
@@ -179,9 +180,12 @@ const GradeUpload = ({ cycle }) => {
               
               <div className="mt-4 flex gap-4 items-end">
   <div className="flex-1">
-    <label className="block text-sm font-medium mb-1">Nota (0-100) o 'Aus'</label>
-    <Input
-      type="text"
+    <label className="block text-sm font-medium mb-1">Nota (0-100)</label>
+    <input
+      type="number"
+      min="0"
+      max="100"
+      step="1"
       value={grade}
       onChange={(e) => setGrade(e.target.value)}
       onKeyDown={(e) => {
@@ -189,8 +193,9 @@ const GradeUpload = ({ cycle }) => {
           handleSaveGrade();
         }
       }}
-      placeholder="Ej: 85 o Aus"
+      placeholder="Ej: 85"
       autoFocus
+      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
     />
   </div>
   

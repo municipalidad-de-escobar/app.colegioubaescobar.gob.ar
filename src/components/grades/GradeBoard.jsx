@@ -45,6 +45,10 @@ const GradeBoard = ({ cycle }) => {
   const handleSaveQuickGrade = async (studentDocId) => {
     try {
       const examId = editingCell.examId
+      if (tempGrade !== '' && (isNaN(tempGrade) || !Number.isInteger(Number(tempGrade)) || Number(tempGrade) < 0 || Number(tempGrade) > 100)) {
+        alert("La nota debe ser un número entero entre 0 y 100")
+        return
+      }
       const value = tempGrade === '' ? null : Number(tempGrade)
       const ref = doc(db, 'cycles', cycle, 'students', studentDocId)
       await updateDoc(ref, {
@@ -104,6 +108,9 @@ const GradeBoard = ({ cycle }) => {
                           <div className="flex items-center gap-1 justify-center">
                             <input
                               type="number"
+                              min="0"
+                              max="100"
+                              step="1"
                               className="w-14 border rounded px-1 text-center h-8"
                               value={tempGrade}
                               onChange={(e) => setTempGrade(e.target.value)}

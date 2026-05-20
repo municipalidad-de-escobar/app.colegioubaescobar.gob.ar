@@ -224,6 +224,8 @@ const MeritOrder = ({ cycle }) => {
                 className="w-40 h-10 border rounded-md px-3 text-sm bg-background"
                 value={tempVacantes}
                 onChange={e => setTempVacantes(Number(e.target.value))}
+                min="1"
+                max="9999"
               />
             </div>
             <Button size="sm" onClick={() => { setVacantes(tempVacantes); setShowSettings(false); }}>

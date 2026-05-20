@@ -204,6 +204,8 @@ const CycleManager = ({ activeCycle, onCycleChange }) => {
                   value={newCycleYear}
                   onChange={e => { setNewCycleYear(e.target.value); setError('') }}
                   onKeyDown={e => e.key === 'Enter' && handleCreateCycle()}
+                  min="2020"
+                  max="2100"
                 />
               </div>
               <Button onClick={handleCreateCycle} disabled={isCreating} className="gap-2">
