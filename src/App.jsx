@@ -1,17 +1,24 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { auth, db } from './config/firebase'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { collection, getDocs } from 'firebase/firestore'
+import AppSelector from './components/AppSelector'
 import Login from './components/auth/Login'
 import Dashboard from './components/dashboard/Dashboard'
 import Loading from './components/ui/Loading'
 import { checkAdminWhitelist } from './utils/authUtils'
+import { useTheme, THEMES } from './hooks/useTheme'
 
 function App() {
   const [user, setUser] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [activeCycle, setActiveCycle] = useState(null)
+  const [selectedApp, setSelectedApp] = useState(null)
+
+  // Apply theme based on current view
+  const currentTheme = !selectedApp && !user ? THEMES.SELECTOR : THEMES.CURSO_INGRESO
+  useTheme(currentTheme)
 
   useEffect(() => {
     let isMounted = true
@@ -83,6 +90,11 @@ function App() {
     )
   }
 
+  // Show app selector if user hasn't selected an app and isn't logged in
+  if (!selectedApp && !user) {
+    return <AppSelector onSelectApp={setSelectedApp} />
+  }
+
   return (
     <>
       {user ? (
@@ -90,7 +102,10 @@ function App() {
           user={user}
           activeCycle={activeCycle}
           onCycleChange={setActiveCycle}
-          onLogout={() => setUser(null)}
+          onLogout={() => {
+            setUser(null)
+            setSelectedApp(null)
+          }}
         />
       ) : (
         <Login onLoginSuccess={setUser} />

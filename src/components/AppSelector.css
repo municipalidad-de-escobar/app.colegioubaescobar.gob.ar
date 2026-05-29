@@ -1,0 +1,151 @@
+.app-selector {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Background pattern */
+.app-selector-bg-pattern {
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 20% 80%, rgba(168, 85, 247, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.08) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Header animation */
+.header-animation {
+  animation: slideInDown 0.6s ease-out;
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Logo animation */
+.logo-pulse {
+  animation: logoPulse 3s ease-in-out infinite;
+}
+
+@keyframes logoPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* Hero content animation */
+.hero-content {
+  animation: slideInUp 0.8s ease-out 0.2s both;
+}
+
+.hero-title {
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, hsl(var(--foreground)) 0%, hsl(var(--foreground)) 70%, hsl(var(--accent)) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-subtitle {
+  animation: fadeIn 1s ease-out 0.4s both;
+}
+
+/* Apps grid */
+.apps-grid {
+  animation: fadeIn 0.8s ease-out 0.6s both;
+}
+
+/* App card wrapper - staggered animation */
+.app-card-wrapper {
+  animation: slideInUp 0.6s ease-out calc(0.7s + var(--index) * 0.1s) both;
+}
+
+/* App card styling */
+.app-card {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.app-card:hover {
+  border-color: hsl(var(--accent));
+}
+
+/* Icon badge */
+.icon-badge {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.app-card:hover .icon-badge {
+  transform: scale(1.1) rotate(-5deg);
+}
+
+/* Card title */
+.card-title {
+  transition: color 0.3s ease-out;
+}
+
+/* Card button */
+.card-button {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: white;
+  font-weight: 600;
+  border: none;
+}
+
+.card-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.card-button:active {
+  transform: translateY(0px);
+}
+
+/* Hover lift effect */
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* Footer animation */
+.footer-content {
+  animation: slideInUp 0.6s ease-out 1s both;
+}
+
+/* Smooth theme transition */
+body.theme-transition {
+  transition: background-color 0.4s ease-out, color 0.4s ease-out;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .app-selector {
+    padding-bottom: 2rem;
+  }
+
+  .hero-title {
+    font-size: 2rem;
+  }
+
+  .apps-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .app-card-wrapper {
+    animation: slideInUp 0.6s ease-out calc(0.7s + var(--index) * 0.15s) both;
+  }
+}
