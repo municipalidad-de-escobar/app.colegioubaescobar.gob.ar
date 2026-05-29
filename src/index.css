@@ -48,18 +48,20 @@
     --font-body: 'Outfit', sans-serif;
   }
 
-  /* Curso de Ingreso theme - modern energetic */
+  /* Curso de Ingreso theme - modern warm */
   body.theme-curso-ingreso {
     --background: 30 100% 98%;
     --foreground: 15 60% 20%;
     --card: 0 0% 100%;
     --card-foreground: 15 60% 20%;
-    --primary: 18 100% 50%;
-    --accent: 120 60% 50%;
+    --primary: 24 100% 63%;           /* #ff8c42 — matches AppSelector accent */
+    --primary-foreground: 0 0% 100%;
+    --accent: 30 90% 94%;             /* warm light orange for hover/secondary */
+    --accent-foreground: 24 80% 30%;
     --border: 30 40% 90%;
     --muted: 30 30% 92%;
     --muted-foreground: 15 30% 55%;
-    --font-display: 'Poppins', sans-serif;
+    --font-display: 'Outfit', sans-serif;  /* matches AppSelector heading font */
     --font-body: 'Poppins', sans-serif;
   }
 

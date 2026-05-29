@@ -150,8 +150,8 @@ const Dashboard = ({ user, activeCycle, onCycleChange, onLogout }) => {
           <style>{`
             .sidebar-btn { color: rgba(255,255,255,0.72); transition: background 120ms, color 120ms; }
             .sidebar-btn:hover { background: rgba(255,255,255,0.07) !important; color: white; }
-            .sidebar-btn-active { background: hsl(18, 100%, 50%) !important; color: white !important; }
-            .sidebar-btn-active:hover { background: hsl(18, 100%, 54%) !important; }
+            .sidebar-btn-active { background: hsl(var(--primary)) !important; color: white !important; }
+            .sidebar-btn-active:hover { filter: brightness(1.08); background: hsl(var(--primary)) !important; }
           `}</style>
           {visibleMenuItems.map(item => {
             const Icon = item.icon
