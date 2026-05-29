@@ -12,6 +12,14 @@ import ReportsManager from '../grades/ReportsManager'
 import MeritOrder from '../grades/MeritOrder'
 import CycleManager from '../cycles/CycleManager'
 
+const roleLabels = {
+  admin: 'Administrador/a',
+  secretary: 'Secretaria/o',
+  teacher: 'Docente',
+  coordinator: 'Coordinador/a',
+  director: 'Director/a',
+}
+
 const Dashboard = ({ user, activeCycle, onCycleChange, onLogout }) => {
   const [activeSection, setActiveSection] = useState('home')
   const [cycles, setCycles] = useState([])
@@ -124,7 +132,7 @@ const Dashboard = ({ user, activeCycle, onCycleChange, onLogout }) => {
           <div className="flex items-center gap-4">
             <div className="flex flex-col items-end text-sm">
               <span className="font-medium">{user?.displayName}</span>
-              <span className="text-xs text-muted-foreground">{user?.role}</span>
+              <span className="text-xs text-muted-foreground">{roleLabels[user?.role] ?? user?.role}</span>
             </div>
             <Button onClick={handleLogout} variant="ghost" size="sm" className="gap-2">
               <LogOut className="w-4 h-4" /> Salir
@@ -135,29 +143,35 @@ const Dashboard = ({ user, activeCycle, onCycleChange, onLogout }) => {
 
       <div className="flex">
         {/* Sidebar */}
-        <aside className="w-64 border-r border-border bg-muted/50 min-h-screen p-4 space-y-1">
+        <aside
+          className="w-64 min-h-screen p-4 space-y-1 shrink-0"
+          style={{ background: 'hsl(15, 65%, 10%)', borderRight: '1px solid rgba(255,140,66,0.12)' }}
+        >
+          <style>{`
+            .sidebar-btn { color: rgba(255,255,255,0.72); transition: background 120ms, color 120ms; }
+            .sidebar-btn:hover { background: rgba(255,255,255,0.07) !important; color: white; }
+            .sidebar-btn-active { background: hsl(18, 100%, 50%) !important; color: white !important; }
+            .sidebar-btn-active:hover { background: hsl(18, 100%, 54%) !important; }
+          `}</style>
           {visibleMenuItems.map(item => {
             const Icon = item.icon
+            const isActive = activeSection === item.id
             return (
               <button
                 key={item.id}
                 onClick={() => setActiveSection(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg font-medium transition-colors ${
-                  activeSection === item.id
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-foreground hover:bg-background'
-                }`}
+                className={`sidebar-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-lg font-medium text-sm ${isActive ? 'sidebar-btn-active' : ''}`}
               >
-                <Icon className="w-5 h-5" />
+                <Icon className="w-5 h-5 shrink-0" />
                 {item.label}
               </button>
             )
           })}
 
           {isReadOnly && (
-            <div className="mt-4 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
-              <p className="text-xs text-amber-700 font-medium">Ciclo {viewingCycle}</p>
-              <p className="text-xs text-amber-600 mt-0.5">Modo solo lectura</p>
+            <div className="mt-4 px-3 py-2 rounded-lg" style={{ background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.2)' }}>
+              <p className="text-xs font-medium" style={{ color: '#fbbf24' }}>Ciclo {viewingCycle}</p>
+              <p className="text-xs mt-0.5" style={{ color: 'rgba(251,191,36,0.7)' }}>Modo solo lectura</p>
             </div>
           )}
         </aside>

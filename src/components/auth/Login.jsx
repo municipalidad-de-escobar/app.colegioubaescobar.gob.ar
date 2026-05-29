@@ -63,10 +63,7 @@ const Login = ({ onLoginSuccess }) => {
   if (isLoading) return <Loading message="Iniciando sesión..." />
 
   return (
-    <div
-      className="min-h-screen flex"
-      style={{ fontFamily: "'Poppins', sans-serif" }}
-    >
+    <div className="min-h-screen flex">
       {/* Left panel — brand identity */}
       <div
         className="hidden md:flex flex-col justify-between p-14 w-1/2 relative overflow-hidden"
@@ -164,7 +161,7 @@ const Login = ({ onLoginSuccess }) => {
           style={{ textDecoration: 'none' }}
         >
           <ArrowLeft size={12} />
-          Volver al portal
+          Volver al portal institucional
         </a>
       </div>
     </div>
