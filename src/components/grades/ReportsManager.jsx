@@ -93,7 +93,7 @@ const ReportsManager = ({ cycle }) => {
         const granTotal = matTotal + plTotal;
 
         // Encabezado
-        pdf.setFontSize(7);
+        pdf.setFontSize(8);
         pdf.setFont("helvetica", "normal");
         pdf.text(titulo, 10, startY + 5);
 
@@ -123,7 +123,7 @@ const ReportsManager = ({ cycle }) => {
 
         // Datos del alumno
         pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(10);
+        pdf.setFontSize(11);
         pdf.text(
             `Alumno/a: ${student.apellido}, ${student.nombre}`,
             10,
@@ -145,7 +145,7 @@ const ReportsManager = ({ cycle }) => {
                     "1° Exam.",
                     "2° Exam.",
                     "3° Exam.",
-                    "Recup.",
+                    "Integrador",
                     "Total",
                     "Gran Total",
                 ],
@@ -169,7 +169,7 @@ const ReportsManager = ({ cycle }) => {
                     },
                 ],
                 [
-                    "P. Lengua",
+                    "P. Lenguaje",
                     formatGrade(student.grades?.[`L1-${cycle}`]),
                     formatGrade(student.grades?.[`L2-${cycle}`]),
                     formatGrade(student.grades?.[`L3-${cycle}`]),
@@ -182,9 +182,9 @@ const ReportsManager = ({ cycle }) => {
                 fillColor: [230, 230, 230],
                 textColor: [0, 0, 0],
                 fontStyle: "bold",
-                fontSize: 8,
+                fontSize: 10,
             },
-            bodyStyles: { halign: "center", fontSize: 9 },
+            bodyStyles: { halign: "center", fontSize: 11 },
             columnStyles: {
                 0: { halign: "left", fontStyle: "bold", cellWidth: 35 },
             },
@@ -199,15 +199,9 @@ const ReportsManager = ({ cycle }) => {
         pdf.line(10, afterTableY, 80, afterTableY);
         pdf.line(120, afterTableY, 190, afterTableY);
         pdf.setLineDash([]);
-        pdf.setFontSize(7);
+        pdf.setFontSize(9);
         pdf.text("Firma del alumno/a", 10, afterTableY + 5);
-        pdf.text(
-            titulo.includes("Escuela")
-                ? "Sello escuela"
-                : "Firma padre / madre / tutor",
-            120,
-            afterTableY + 5,
-        );
+        pdf.text("Firma Padre / Madre", 120, afterTableY + 5);
     };
 
     // Genera el PDF para una lista de estudiantes (puede ser 1, una comisión, o todos)
