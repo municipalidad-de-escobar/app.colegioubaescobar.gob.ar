@@ -104,8 +104,8 @@ const ListadoNotas = ({ cycle }) => {
         head: [
           [
             'Apellido', 'Nombre', 'DNI', 'Com.',
-            'M1', 'M2', 'M3', 'Recup. Mat.', 'Total Mat.',
-            'L1', 'L2', 'L3', 'Recup. Leng.', 'Total Leng.',
+            'M1', 'M2', 'M3', 'RM', 'Total Mat.',
+            'L1', 'L2', 'L3', 'RL', 'Total Leng.',
             'Gran Total',
           ],
         ],
@@ -198,12 +198,12 @@ const ListadoNotas = ({ cycle }) => {
                 <TableHead className="text-center">M1</TableHead>
                 <TableHead className="text-center">M2</TableHead>
                 <TableHead className="text-center">M3</TableHead>
-                <TableHead className="text-center">Recup. Mat.</TableHead>
+                <TableHead className="text-center">RM</TableHead>
                 <TableHead className="text-center font-semibold">Total Mat.</TableHead>
                 <TableHead className="text-center">L1</TableHead>
                 <TableHead className="text-center">L2</TableHead>
                 <TableHead className="text-center">L3</TableHead>
-                <TableHead className="text-center">Recup. Leng.</TableHead>
+                <TableHead className="text-center">RL</TableHead>
                 <TableHead className="text-center font-semibold">Total Leng.</TableHead>
                 <TableHead className="text-center font-semibold">Gran Total</TableHead>
               </TableRow>
