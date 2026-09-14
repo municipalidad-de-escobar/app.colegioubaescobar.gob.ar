@@ -56,7 +56,7 @@ const ReportsManager = ({ cycle }) => {
             `${examPrefix}2-${cycle}`,
             `${examPrefix}3-${cycle}`,
         ];
-        const recupId = `${examPrefix}R-${cycle}`;
+        const recupId = `R${examPrefix}-${cycle}`;
 
         let total = 0;
         let hasAbsent = false;

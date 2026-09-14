@@ -4,12 +4,13 @@ import { signOut } from 'firebase/auth'
 import { collection, getDocs } from 'firebase/firestore'
 import Button from '../ui/Button'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/Card'
-import { LogOut, Users, FileUp, BarChart3, Settings, Home, Archive, Trophy, ChevronDown } from 'lucide-react'
+import { LogOut, Users, FileUp, BarChart3, Settings, Home, Archive, Trophy, ChevronDown, ClipboardList } from 'lucide-react'
 import ImportStudents from '../import/ImportStudents'
 import StudentsList from '../students/StudentsList'
 import GradeUpload from '../grades/GradeUpload'
 import ReportsManager from '../grades/ReportsManager'
 import MeritOrder from '../grades/MeritOrder'
+import ListadoNotas from '../grades/ListadoNotas'
 import CycleManager from '../cycles/CycleManager'
 
 const roleLabels = {
@@ -68,6 +69,7 @@ const Dashboard = ({ user, activeCycle, onCycleChange, onLogout }) => {
     { id: 'students', label: 'Lista de Estudiantes', icon: Users },
     { id: 'grades',   label: 'Carga de Notas',       icon: BarChart3, readOnlyHidden: true },
     { id: 'reports',  label: 'Boletines',            icon: Settings },
+    { id: 'listado',  label: 'Reportes',             icon: ClipboardList },
      { id: 'merit',    label: 'Orden de Mérito',      icon: Trophy },
     { id: 'cycles',   label: 'Gestión de Ciclos',    icon: Archive,   adminOnly: true },
   ]
@@ -247,6 +249,16 @@ const Dashboard = ({ user, activeCycle, onCycleChange, onLogout }) => {
                     <CardDescription>Generá e imprimí los boletines de notas</CardDescription>
                   </CardContent>
                 </Card>
+                <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setActiveSection('listado')}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <ClipboardList className="w-5 h-5 text-primary" /> Reportes
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <CardDescription>Listado de notas por comisión, exportable a PDF</CardDescription>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           )}
@@ -289,6 +301,16 @@ const Dashboard = ({ user, activeCycle, onCycleChange, onLogout }) => {
                 {isReadOnly && <span className="text-sm font-normal text-amber-600 ml-2">· Solo lectura</span>}
               </h2>
               <ReportsManager cycle={viewingCycle} />
+            </div>
+          )}
+
+          {activeSection === 'listado' && (
+            <div className="space-y-4">
+              <h2 className="text-2xl font-bold mb-4">
+                Reportes
+                {isReadOnly && <span className="text-sm font-normal text-amber-600 ml-2">· Solo lectura</span>}
+              </h2>
+              <ListadoNotas cycle={viewingCycle} />
             </div>
           )}
 
