@@ -53,12 +53,12 @@ const processStudents = (students, vacantes, matExams, lenExams, matRecup, lenRe
     const cumpleTotal = granTotal >= 360;
     const cumpleExamenes = rendidos >= 6;
     const clasifica = cumplePiso && cumpleTotal && cumpleExamenes;
-    const enListado = cumpleTotal && cumpleExamenes; // aparece en la lista ordenada
+    const enListado = cumpleTotal; // aparece en la lista ordenada (con número o con ***)
 
     return { ...s, matTotal, lenTotal, granTotal, rendidos, clasifica, enListado, cumplePiso };
   });
 
-  // Separar los que no llegan a 360 o no tienen 6 exámenes
+  // Separar los que no llegan a 360
   const enListado = processed.filter(s => s.enListado);
   const fuera = processed.filter(s => !s.enListado);
 
@@ -112,7 +112,7 @@ const exportToExcel = async (enListado, fuera, cycle, vacantes) => {
 
   // Separador y leyenda ***
   wsData.push([]);
-  wsData.push(['', '*** No alcanza los 180 puntos en alguna de las materias o los 6 exámenes mínimos']);
+  wsData.push(['', '*** No alcanza los 180 puntos en alguna de las materias y/o los 6 exámenes mínimos']);
   wsData.push([]);
 
   // Sección puntaje menor a 360
@@ -293,7 +293,7 @@ const MeritOrder = ({ cycle }) => {
                 <>
                   <TableRow>
                     <TableCell colSpan={9} className="bg-amber-50 text-amber-800 font-semibold text-center py-2 text-sm">
-                      ↓ Puntaje menor a 360 puntos o menos de 6 exámenes rendidos — No acceden a vacante
+                      ↓ Puntaje menor a 360 puntos — No acceden a vacante
                     </TableCell>
                   </TableRow>
                   {fuera.map(s => (
@@ -326,7 +326,7 @@ const MeritOrder = ({ cycle }) => {
         {/* Leyenda */}
         <div className="flex flex-wrap gap-4 text-xs text-muted-foreground border-t pt-3">
           <span className="flex items-center gap-1"><span className="w-3 h-3 bg-red-200 rounded inline-block" /> Total materia &lt; 180 pts</span>
-          <span className="flex items-center gap-1"><span className="font-bold text-red-600">***</span> No cumple piso por materia (no consume número de orden)</span>
+          <span className="flex items-center gap-1"><span className="font-bold text-red-600">***</span> No alcanza los 180 puntos en alguna de las materias y/o los 6 exámenes mínimos (no consume número de orden)</span>
           <span className="flex items-center gap-1"><span className="font-semibold text-green-700">Ingreso directo</span> Primeros {vacantes} clasificados</span>
           <span className="flex items-center gap-1"><span className="text-blue-700">Sorteo de vacante</span> Posición &gt; {vacantes} en el listado</span>
         </div>

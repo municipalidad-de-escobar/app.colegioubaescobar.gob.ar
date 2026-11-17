@@ -156,7 +156,7 @@ const ReportsManager = ({ cycle }) => {
                     formatGrade(student.grades?.[`M1-${cycle}`]),
                     formatGrade(student.grades?.[`M2-${cycle}`]),
                     formatGrade(student.grades?.[`M3-${cycle}`]),
-                    formatGrade(student.grades?.[`MR-${cycle}`]),
+                    formatGrade(student.grades?.[`RM-${cycle}`]),
                     matTotal,
                     {
                         content: granTotal,
@@ -173,7 +173,7 @@ const ReportsManager = ({ cycle }) => {
                     formatGrade(student.grades?.[`L1-${cycle}`]),
                     formatGrade(student.grades?.[`L2-${cycle}`]),
                     formatGrade(student.grades?.[`L3-${cycle}`]),
-                    formatGrade(student.grades?.[`LR-${cycle}`]),
+                    formatGrade(student.grades?.[`RL-${cycle}`]),
                     plTotal,
                 ],
             ],
