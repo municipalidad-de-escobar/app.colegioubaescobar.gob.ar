@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Input } from '../ui/Input';
 import Button from '../ui/Button';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { examOptions as buildExamOptions } from '../../utils/exams';
 
 const GradeUpload = ({ cycle }) => {
   const [selectedExam, setSelectedExam] = useState('');
@@ -14,17 +15,15 @@ const GradeUpload = ({ cycle }) => {
   const [status, setStatus] = useState({ type: '', message: '' });
   const inputRef = useRef(null);
 
-  // Opciones de examen (mismas que en StudentsList)
-  const examOptions = [
-    { value: 'M1-2026', label: 'Matemática 1' },
-    { value: 'M2-2026', label: 'Matemática 2' },
-    { value: 'M3-2026', label: 'Matemática 3' },
-    { value: 'RM-2026', label: 'Recuperatorio Matemática' },
-    { value: 'L1-2026', label: 'Lengua 1' },
-    { value: 'L2-2026', label: 'Lengua 2' },
-    { value: 'L3-2026', label: 'Lengua 3' },
-    { value: 'RL-2026', label: 'Recuperatorio Lengua' },
-  ];
+  // Las del ciclo que se está viendo: con un año fijo, la lectora rechazaría
+  // las carátulas de cualquier otro ciclo.
+  const examOptions = buildExamOptions(cycle);
+
+  // Al cambiar de ciclo, el examen elegido pertenece al ciclo anterior.
+  useEffect(() => {
+    setSelectedExam('');
+    setCurrentStudent(null);
+  }, [cycle]);
 
   // Mantener el foco en el input para la lectora
   useEffect(() => {

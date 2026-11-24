@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Input } from '../ui/Input';
 import Button from '../ui/Button'; // Importamos tu componente Button
 import { Edit2, Check, X } from 'lucide-react';
+import { boardExams } from '../../utils/exams';
 
 const GradeBoard = ({ cycle }) => {
   const [students, setStudents] = useState([]);
@@ -15,14 +16,7 @@ const GradeBoard = ({ cycle }) => {
   const [editingCell, setEditingCell] = useState(null); // { studentId, examId }
   const [tempGrade, setTempGrade] = useState('');
 
-  const exams = [
-    { id: 'M1-2026', label: 'Mat. 1' },
-    { id: 'M2-2026', label: 'Mat. 2' },
-    { id: 'M3-2026', label: 'Mat. 3' },
-    { id: 'L1-2026', label: 'Len. 1' },
-    { id: 'L2-2026', label: 'Len. 2' },
-    { id: 'L3-2026', label: 'Len. 3' }
-  ];
+  const exams = boardExams(cycle);
 
   useEffect(() => {
     const q = query(
