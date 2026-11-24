@@ -24,7 +24,7 @@ const EXPECTED_HEADERS = [
 /**
  * Componente para importar estudiantes desde CSV
  */
-const ImportStudents = ({ cycle = '2026', onSuccess }) => {
+const ImportStudents = ({ cycle = String(new Date().getFullYear()), onSuccess }) => {
   const [file, setFile] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)

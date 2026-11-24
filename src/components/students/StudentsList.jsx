@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { FileText } from 'lucide-react'
 import { Edit } from 'lucide-react'
 import EditStudentModal from './EditStudentModal'
+import { examOptions as buildExamOptions } from '../../utils/exams'
 
 
 const StudentsList = ({ cycle }) => {
@@ -39,16 +40,12 @@ const StudentsList = ({ cycle }) => {
     }
   }
 
-  const examOptions = [
-    { value: 'M1-2026', label: 'Matemática 1' },
-    { value: 'M2-2026', label: 'Matemática 2' },
-    { value: 'M3-2026', label: 'Matemática 3' },
-     { value: 'RM-2026', label: 'Recuperatorio Matemática' },
-     { value: 'L1-2026', label: 'Lengua 1' },
-    { value: 'L2-2026', label: 'Lengua 2' },
-    { value: 'L3-2026', label: 'Lengua 3' },
-     { value: 'RL-2026', label: 'Recuperatorio Lengua' }
-  ]
+  const examOptions = buildExamOptions(cycle)
+
+  // Al cambiar de ciclo, el examen elegido pertenece al ciclo anterior.
+  useEffect(() => {
+    setSelectedExam('')
+  }, [cycle])
 
   useEffect(() => {
     const q = query(
